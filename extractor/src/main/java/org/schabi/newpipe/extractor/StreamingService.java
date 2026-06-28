@@ -103,6 +103,26 @@ public abstract class StreamingService {
     private String proxyToken = null;
     private Boolean proxyEnabled = false;
     private Set<String> cookieFunctions = null;
+    // yt-dlp integration (restored): when enabled, the client resolves YouTube streams via yt-dlp
+    // (our API-23 runtime) first, with NewPipe as the fallback. ytdlpConfig = extra extractor-args.
+    private boolean ytdlpEnabled = false;
+    private String ytdlpConfig = null;
+
+    public void setYtdlpEnabled(final boolean ytdlpEnabled) {
+        this.ytdlpEnabled = ytdlpEnabled;
+    }
+
+    public boolean isYtdlpEnabled() {
+        return ytdlpEnabled;
+    }
+
+    public void setYtdlpConfig(final String ytdlpConfig) {
+        this.ytdlpConfig = ytdlpConfig;
+    }
+
+    public String getYtdlpConfig() {
+        return ytdlpConfig;
+    }
     private String audioLanguage = "original";
     private String autoTranslatedSubtitlesLanguage = "en";
     private boolean showAutoTranslatedSubtitles = false;
@@ -272,21 +292,7 @@ public abstract class StreamingService {
 
     /**
      * Must create a new instance of a StreamExtractor implementation.
-     *    public void setYtdlpConfig(String ytdlpConfig) {
-        this.ytdlpConfig = ytdlpConfig;
-    }
-
-    public String getYtdlpConfig() {
-        return ytdlpConfig;
-    }
-
-    public void setYtdlpEnabled(boolean ytdlpEnabled) {
-        this.ytdlpEnabled = ytdlpEnabled;
-    }
-
-    public boolean isYtdlpEnabled() {
-        return ytdlpEnabled;
-    }
+     *
      * @param linkHandler is pointing to the stream which should be handled by this new instance.
      * @return a new StreamExtractor
      */
