@@ -59,5 +59,14 @@ public enum DeliveryMethod {
      * messages and receiving UMP responses that carry media segments and control policies until
      * playback ends.</p>
      */
-    SABR
+    SABR,
+
+    /**
+     * Used for {@link Stream}s resolved by yt-dlp that must be delivered through the client's
+     * local bridge: the raw URL points at an adaptive stream (fragmented MP4 / adaptive WebM
+     * without init or index ranges) that players cannot consume directly as progressive media,
+     * so the client fetches and remuxes it locally (e.g. with ffmpeg into a local HLS playlist)
+     * and plays the local output instead of this URL.
+     */
+    YTDLP
 }
