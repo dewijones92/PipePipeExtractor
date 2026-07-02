@@ -45,7 +45,7 @@ public final class NewPipe {
     private static Downloader downloader;
     private static Localization preferredLocalization;
     private static ContentCountry preferredContentCountry;
-    private static boolean forceSabr;
+    private static String youtubePlayerClient = "mweb";
 
     private NewPipe() {
 
@@ -162,12 +162,18 @@ public final class NewPipe {
         NewPipe.preferredContentCountry = preferredContentCountry;
     }
 
-    public static boolean isForceSabr() {
-        return forceSabr;
+    public static String getYoutubePlayerClient() {
+        return youtubePlayerClient;
     }
 
-    public static void setForceSabr(final boolean forceSabr) {
-        NewPipe.forceSabr = forceSabr;
+    public static void setYoutubePlayerClient(final String youtubePlayerClient) {
+        if ("web_safari".equals(youtubePlayerClient)
+                || "web".equals(youtubePlayerClient)
+                || "mweb".equals(youtubePlayerClient)) {
+            NewPipe.youtubePlayerClient = youtubePlayerClient;
+        } else {
+            NewPipe.youtubePlayerClient = "mweb";
+        }
     }
 
     public static void trustEveryone() {
