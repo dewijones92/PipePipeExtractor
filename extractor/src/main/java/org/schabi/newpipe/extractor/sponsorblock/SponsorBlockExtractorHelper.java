@@ -29,13 +29,27 @@ public final class SponsorBlockExtractorHelper {
     public static SponsorBlockSegment[] getSegments(final StreamExtractor extractor,
                                                     final SponsorBlockApiSettings apiSettings)
             throws UnsupportedEncodingException, ParsingException {
-        if (!extractor.getService().getServiceInfo()
+        return getSegments(extractor.getService(), extractor.getId(), apiSettings);
+    }
+
+    /**
+     * Fetch SponsorBlock segments without a {@link StreamExtractor}. Used by the yt-dlp playback
+     * path, which builds its {@link StreamInfo} directly (bypassing
+     * {@link StreamInfo#getInfo(StreamExtractor)}, where segments are otherwise fetched) and so
+     * would have no segments to skip.
+     */
+    public static SponsorBlockSegment[] getSegments(final StreamingService service,
+                                                    final String rawVideoId,
+                                                    final SponsorBlockApiSettings apiSettings)
+            throws UnsupportedEncodingException, ParsingException {
+        if (!service.getServiceInfo()
                 .getMediaCapabilities()
                 .contains(StreamingService.ServiceInfo.MediaCapability.SPONSORBLOCK)) {
             return new SponsorBlockSegment[0];
         }
+        final int serviceId = service.getServiceId();
 
-        String videoId = extractor.getId();
+        String videoId = rawVideoId;
         videoId = videoId.split("\\?")[0];
 
         final ArrayList<String> categoryParamList = new ArrayList<>();
@@ -85,7 +99,7 @@ public final class SponsorBlockExtractorHelper {
             return new SponsorBlockSegment[0];
         }
 
-        final String url = getApiUrl(extractor.getServiceId()) + "skipSegments/" + videoIdHash.substring(0, 4)
+        final String url = getApiUrl(serviceId) + "skipSegments/" + videoIdHash.substring(0, 4)
                 + "?categories=" + categoryParams
                 + "&actionTypes=" + actionParams
                 + "&userAgent=Mozilla/5.0";
@@ -137,7 +151,7 @@ public final class SponsorBlockExtractorHelper {
                         new SponsorBlockSegment(uuid, startTime, endTime,
                                 SponsorBlockCategory.fromApiName(category),
                                 SponsorBlockAction.fromApiName(action),
-                                extractor.getServiceId());
+                                serviceId);
                 result.add(sponsorBlockSegment);
             }
         }
