@@ -15,6 +15,7 @@ import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
 import com.grack.nanojson.JsonParserException;
+import com.grack.nanojson.JsonStringWriter;
 import com.grack.nanojson.JsonWriter;
 
 import org.schabi.newpipe.extractor.InfoItem;
@@ -70,33 +71,10 @@ public class YoutubeMusicSearchExtractor extends YoutubeBaseSearchExtractor {
         // if params be null (which never should happen), JsonWriter.string() can handle it
         final String params = contentFilterItem.getParams();
 
-        // @formatter:off
-        final byte[] json = JsonWriter.string()
-            .object()
-                .object("context")
-                    .object("client")
-                        .value("clientName", "WEB_REMIX")
-                        .value("clientVersion", getYoutubeMusicClientVersion())
-                        .value("hl", "en-GB")
-                        .value("gl", getExtractorContentCountry().getCountryCode())
-                        .value("platform", "DESKTOP")
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
-                .end()
+        final byte[] json = writeMusicContext(JsonWriter.string().object())
                 .value("query", getSearchString())
                 .value("params", params)
-            .end().done().getBytes(StandardCharsets.UTF_8);
-        // @formatter:on
+                .end().done().getBytes(StandardCharsets.UTF_8);
 
         final Map<String, List<String>> headers = getYoutubeMusicHeaders();
         headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -199,31 +177,8 @@ public class YoutubeMusicSearchExtractor extends YoutubeBaseSearchExtractor {
 
         final MultiInfoItemsCollector collector = new MultiInfoItemsCollector(getServiceId());
 
-        // @formatter:off
-        final byte[] json = JsonWriter.string()
-            .object()
-                .object("context")
-                    .object("client")
-                        .value("clientName", "WEB_REMIX")
-                        .value("clientVersion", getYoutubeMusicClientVersion())
-                        .value("hl", "en-GB")
-                        .value("gl", getExtractorContentCountry().getCountryCode())
-                        .value("platform", "DESKTOP")
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
-                .end()
-            .end().done().getBytes(StandardCharsets.UTF_8);
-        // @formatter:on
+        final byte[] json = writeMusicContext(JsonWriter.string().object())
+                .end().done().getBytes(StandardCharsets.UTF_8);
 
         final Map<String, List<String>> headers = getYoutubeMusicHeaders();
         headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -285,6 +240,37 @@ public class YoutubeMusicSearchExtractor extends YoutubeBaseSearchExtractor {
                             break;
                     }
                 });
+    }
+
+    /**
+     * Write the shared InnerTube "context" object of a music.youtube.com request body onto an
+     * open JSON object; the caller adds any request-specific values and closes the object.
+     */
+    private JsonStringWriter writeMusicContext(final JsonStringWriter writer)
+            throws IOException, ExtractionException {
+        // @formatter:off
+        return writer
+                .object("context")
+                    .object("client")
+                        .value("clientName", "WEB_REMIX")
+                        .value("clientVersion", getYoutubeMusicClientVersion())
+                        .value("hl", "en-GB")
+                        .value("gl", getExtractorContentCountry().getCountryCode())
+                        .value("platform", "DESKTOP")
+                        .value("utcOffsetMinutes", 0)
+                    .end()
+                    .object("request")
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
+                    .end()
+                    .object("user")
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
+                        .value("lockedSafetyMode", false)
+                    .end()
+                .end();
+        // @formatter:on
     }
 
     @Nullable

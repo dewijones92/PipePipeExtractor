@@ -168,7 +168,12 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     /**
      * Abstract Implementation of extracting User Videos
      */
-    public interface UserVideoImpl {
+    public abstract static class UserVideoImpl {
+
+        JsonObject userVideoData = new JsonObject();
+
+        /** The array of user videos inside {@link #userVideoData}. */
+        abstract JsonArray getVideosArray();
 
         /**
          * Collect videos from results json
@@ -178,26 +183,28 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
          * @param results   Json Array of user videos
          * @throws ParsingException if failed to parse
          */
-        void collectVideos(
+        public abstract void collectVideos(
                 StreamInfoItemsCollector collector,
                 ChannelExtractor extractor,
                 JsonArray results
         ) throws ParsingException;
 
-        void onFetchPage(
+        public abstract void onFetchPage(
                 @Nonnull Downloader downloader,
                 String id,
                 String url
         ) throws IOException, ExtractionException;
 
         // return true if it contains videos
-        boolean getInitialPage(
+        public boolean getInitialPage(
                 @Nonnull StreamInfoItemsCollector collector,
                 @Nonnull ChannelExtractor extractor
-        ) throws IOException, ExtractionException;
+        ) throws IOException, ExtractionException {
+            return collectIfNotEmpty(collector, extractor);
+        }
 
         // return true if it contains videos
-        boolean getPage(
+        public abstract boolean getPage(
                 @Nonnull Page page,
                 @Nonnull StreamInfoItemsCollector collector,
                 @Nonnull Downloader downloader,
@@ -205,22 +212,49 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
                 @Nonnull String id
         ) throws IOException, ExtractionException;
 
+        /** Commit the current videos array if non-empty; true if it contained videos. */
+        final boolean collectIfNotEmpty(
+                @Nonnull StreamInfoItemsCollector collector,
+                @Nonnull ChannelExtractor extractor
+        ) throws ParsingException {
+            JsonArray videos = getVideosArray();
+
+            if (!videos.isEmpty()) {
+                collectVideos(collector, extractor, videos);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         /**
          * last video of current page
          *
          * @return av
          */
-        long lastVideo();
+        public long lastVideo() {
+            JsonArray videos = getVideosArray();
+            if (!videos.isEmpty()) {
+                JsonObject last = videos.getObject(videos.size() - 1);
+                long aid = last.getLong("aid", 0);
+                String bvid = last.getString("bvid");
+                if (aid > 0) {
+                    return aid;
+                } else {
+                    return utils.bv2av(bvid);
+                }
+            }
+            return 0;
+        }
     }
 
     /**
      * Extracting from BiliBili Client API
      */
-    public static class ClientUserVideoImpl implements UserVideoImpl {
+    public static class ClientUserVideoImpl extends UserVideoImpl {
 
-        public JsonObject userVideoData = new JsonObject();
-
-        private JsonArray getVideosArray() {
+        @Override
+        JsonArray getVideosArray() {
             return userVideoData.getObject("data").getArray("item");
         }
 
@@ -263,22 +297,6 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
         }
 
         @Override
-        public boolean getInitialPage(
-                @Nonnull StreamInfoItemsCollector collector,
-                @Nonnull ChannelExtractor extractor
-        ) throws IOException, ExtractionException {
-
-            JsonArray videosArray = getVideosArray();
-
-            if (!videosArray.isEmpty()) {
-                collectVideos(collector, extractor, videosArray);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
         public boolean getPage(
                 @Nonnull Page page,
                 @Nonnull StreamInfoItemsCollector collector,
@@ -289,14 +307,7 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
 
             fetchViaAPI(downloader, id, Long.parseLong(page.getId()));
 
-            JsonArray videosArray = getVideosArray();
-
-            if (!videosArray.isEmpty()) {
-                collectVideos(collector, extractor, videosArray);
-                return true;
-            } else {
-                return false;
-            }
+            return collectIfNotEmpty(collector, extractor);
         }
 
         @Override
@@ -320,11 +331,10 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     /**
      * Extracting from BiliBili Search API
      */
-    public static class SearchUserVideoImpl implements UserVideoImpl {
+    public static class SearchUserVideoImpl extends UserVideoImpl {
 
-        JsonObject userVideoData = new JsonObject();
-
-        private JsonArray getVideosArray() {
+        @Override
+        JsonArray getVideosArray() {
             return userVideoData.getObject("data").getArray("archives");
         }
 
@@ -371,22 +381,6 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
         }
 
         @Override
-        public boolean getInitialPage(
-                @Nonnull StreamInfoItemsCollector collector,
-                @Nonnull ChannelExtractor extractor
-        ) throws IOException, ExtractionException {
-
-            JsonArray videos = getVideosArray();
-
-            if (!videos.isEmpty()) {
-                collectVideos(collector, extractor, videos);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
         public boolean getPage(
                 @Nonnull Page page,
                 @Nonnull StreamInfoItemsCollector collector,
@@ -397,41 +391,17 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
 
             fetchViaAPI(downloader, id, page.getUrl());
 
-            JsonArray videosArray = getVideosArray();
-
-            if (!videosArray.isEmpty()) {
-                collectVideos(collector, extractor, videosArray);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
-        public long lastVideo() {
-            JsonArray videos = getVideosArray();
-            if (!videos.isEmpty()) {
-                JsonObject last = videos.getObject(videos.size() - 1);
-                long aid = last.getLong("aid", 0);
-                String bvid = last.getString("bvid");
-                if (aid > 0) {
-                    return aid;
-                } else {
-                    return utils.bv2av(bvid);
-                }
-            }
-            return 0;
+            return collectIfNotEmpty(collector, extractor);
         }
     }
 
     /**
      * Extracting from BiliBili Web API
      */
-    public static class WebUserVideoImpl implements UserVideoImpl {
+    public static class WebUserVideoImpl extends UserVideoImpl {
 
-        JsonObject userVideoData = new JsonObject();
-
-        private JsonArray getVideosArray() {
+        @Override
+        JsonArray getVideosArray() {
             return userVideoData.getObject("data").getObject("list").getArray("vlist");
         }
 
@@ -485,22 +455,6 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
         }
 
         @Override
-        public boolean getInitialPage(
-                @Nonnull StreamInfoItemsCollector collector,
-                @Nonnull ChannelExtractor extractor
-        ) throws IOException, ExtractionException {
-
-            JsonArray videos = getVideosArray();
-
-            if (!videos.isEmpty()) {
-                collectVideos(collector, extractor, videos);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
         public boolean getPage(
                 @Nonnull Page page,
                 @Nonnull StreamInfoItemsCollector collector,
@@ -511,30 +465,7 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
 
             fetchViaAPI(downloader, id, page.getUrl());
 
-            JsonArray videosArray = getVideosArray();
-
-            if (!videosArray.isEmpty()) {
-                collectVideos(collector, extractor, videosArray);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
-        public long lastVideo() {
-            JsonArray videos = getVideosArray();
-            if (!videos.isEmpty()) {
-                JsonObject last = videos.getObject(videos.size() - 1);
-                long aid = last.getLong("aid", 0);
-                String bvid = last.getString("bvid");
-                if (aid > 0) {
-                    return aid;
-                } else {
-                    return utils.bv2av(bvid);
-                }
-            }
-            return 0;
+            return collectIfNotEmpty(collector, extractor);
         }
     }
 
